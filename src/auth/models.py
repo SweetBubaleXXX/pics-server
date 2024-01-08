@@ -1,8 +1,10 @@
-from typing import Optional
-
-from sqlmodel import Field, SQLModel
+from pydantic import BaseModel
 
 
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str
+class JwtTokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+
+
+class JwtTokenPayload(BaseModel):
+    user_id: int

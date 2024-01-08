@@ -1,4 +1,6 @@
-from pydantic import PostgresDsn
+import secrets
+
+from pydantic import Field, AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,4 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    db_url: PostgresDsn
+    secret_key: str = Field(default_factory=secrets.token_hex)
+    access_token_expire_minutes: int = 20
+
+    db_url: AnyUrl
