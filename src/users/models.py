@@ -1,7 +1,7 @@
 from enum import StrEnum, auto
 from typing import Optional
 
-from sqlmodel import Field, SQLModel, Enum
+from sqlmodel import Enum, Field, SQLModel
 
 
 class Role(StrEnum):
@@ -11,14 +11,9 @@ class Role(StrEnum):
 
 
 class UserBase(SQLModel):
-    username: str
+    username: str = Field(unique=True)
     role: Role = Field(sa_column=Enum(Role), default=Role.USER)
     disabled: bool = False
-
-
-class User(UserBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    password: str
 
 
 class UserRead(UserBase):
@@ -26,4 +21,9 @@ class UserRead(UserBase):
 
 
 class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
     password: str

@@ -1,4 +1,5 @@
 from typing import Type
+
 from pydantic import AnyUrl
 from sqlalchemy import Pool
 from sqlmodel import Session, SQLModel, create_engine

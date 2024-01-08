@@ -1,10 +1,11 @@
 from typing import Annotated, Iterator
-from dependency_injector.wiring import inject, Provide
+
+from dependency_injector.wiring import Provide, inject
 from fastapi import Depends
 from sqlmodel import Session
 
-from .service import Database
 from ..containers import Container
+from .service import Database
 
 
 @inject

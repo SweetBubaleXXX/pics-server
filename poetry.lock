@@ -377,6 +377,24 @@ typing-extensions = ">=4.8.0"
 all = ["email-validator (>=2.0.0)", "httpx (>=0.23.0)", "itsdangerous (>=1.1.0)", "jinja2 (>=2.11.2)", "orjson (>=3.2.1)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.5)", "pyyaml (>=5.3.1)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
+name = "fastapi-jwt"
+version = "0.2.0"
+description = "`FastAPI` extension for JTW Auth"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "fastapi_jwt-0.2.0-py3-none-any.whl", hash = "sha256:8ddff9ab0f6f3be456f0540015e05e66216d26cd63dc502ee6cd3e50da5ced45"},
+]
+
+[package.dependencies]
+fastapi = ">=0.50.0"
+python-jose = {version = ">=3.3.0", extras = ["cryptography"]}
+
+[package.extras]
+docs = ["MkAutoDoc (>=0.2.0,<1.0.0)", "lazydocs (>=0.4.5,<1.0.0)", "mike (>=1.1.0,<2.0.0)", "mkdocs (>=1.4.0,<2.0.0)", "mkdocs-awesome-pages-plugin (>=2.8.0,<3.0.0)", "mkdocs-include-markdown-plugin (>=4.0.0,<7.0.0)", "mkdocs-material (>=9.0.0,<10.0.0)"]
+test = ["black (==23.10.1)", "flake8 (>=6.0.0,<7.0.0)", "httpx (>=0.23.0,<1.0.0)", "isort (>=5.11.0,<6.0.0)", "mypy (>=1.0.0,<2.0.0)", "pytest (>=7.0.0,<8.0.0)", "pytest-cov (>=4.0.0,<5.0.0)", "pytest-mock (>=3.0.0,<4.0.0)", "requests (>=2.28.0,<3.0.0)", "ruff (>=0.1.0,<1.0.0)", "types-python-jose (==3.3.4.8)"]
+
+[[package]]
 name = "greenlet"
 version = "3.0.3"
 description = "Lightweight in-process concurrent programming"
@@ -1438,4 +1456,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b4423b2261b2398ee769c7b24e90fdf5f6bff947acf291302ed334e59c6a6c8e"
+content-hash = "7e1d456a2c3c3062f0db644a3ec2ca808314416afcccfa8333c92a0232d1a839"

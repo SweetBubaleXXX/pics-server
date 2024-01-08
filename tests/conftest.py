@@ -1,12 +1,8 @@
 import pytest
 import pytest_asyncio
+from asgi_lifespan import LifespanManager
 from factory import Faker
 from factory.alchemy import SQLAlchemyModelFactory
-
-from src.users.models import User
-
-
-from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
 from sqlalchemy import StaticPool
 from sqlmodel import Session
@@ -14,10 +10,10 @@ from sqlmodel import Session
 from src.config import Settings
 from src.containers import Container
 from src.db.service import Database
-from src.db.dependency import get_db_session
+from src.db.session import get_db_session
 from src.main import create_app
+from src.users.models import User
 from src.users.service import UsersService
-
 
 TEST_DB_URL = "sqlite:///:memory:"
 

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .containers import Container
+from .exceptions import setup_exception_handlers
 
 
 @asynccontextmanager
@@ -18,4 +19,7 @@ def create_app() -> FastAPI:
     container = Container()
     app = FastAPI(lifespan=functools.partial(lifespan, container))
     app.container = container
+
+    setup_exception_handlers(app)
+
     return app

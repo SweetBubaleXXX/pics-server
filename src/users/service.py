@@ -1,9 +1,11 @@
-from dependency_injector.wiring import inject, Provide
+from dependency_injector.wiring import Provide, inject
 from passlib.context import CryptContext
+from sqlmodel import select
 
-from .models import User, UserCreate, UserRead
-from ..db.dependency import DBSession
 from ..containers import Container
+from ..db.session import DBSession
+from .exceptions import UserNotFound
+from .models import User, UserCreate, UserRead
 
 
 class UsersService:
@@ -16,7 +18,13 @@ class UsersService:
         self._db = database
         self._passlib_context = passlib_context
 
-    def create_url(self, user: UserCreate) -> UserRead:
+    def get_user_by_id(self, user_id: int) -> UserRead:
+        user = self._db.exec(select(User).where(User.id == user_id)).first()
+        if not user:
+            raise UserNotFound()
+        return UserRead.model_validate(user)
+
+    def create_user(self, user: UserCreate) -> UserRead:
         hashed_password = self._passlib_context.hash(user.password)
         db_user = User(
             **user.model_dump(exclude=("password",)),

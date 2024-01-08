@@ -1,6 +1,6 @@
 import secrets
 
-from pydantic import Field, AnyUrl
+from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +12,5 @@ class Settings(BaseSettings):
     )
 
     secret_key: str = Field(default_factory=secrets.token_hex)
-    access_token_expire_minutes: int = 20
 
     db_url: AnyUrl
