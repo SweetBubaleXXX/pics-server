@@ -72,6 +72,7 @@ def user_factory(db_session: Session):
         class Meta:
             model = User
             sqlalchemy_session = db_session
+            sqlalchemy_session_persistence = "flush"
 
     return UserFactory
 

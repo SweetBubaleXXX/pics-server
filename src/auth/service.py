@@ -6,9 +6,10 @@ from fastapi_jwt import JwtAuthorizationCredentials
 from fastapi_jwt.jwt import JwtAccess, JwtRefresh
 
 from ..containers import Container
+from ..users.exceptions import InvalidPassword, UserNotFound
 from ..users.models import Role, UserRead
 from ..users.service import UsersService
-from .models import JwtTokenPair, TokenSubject
+from .models import JwtTokenPair, LoginSchema, TokenSubject
 
 
 @inject
@@ -21,8 +22,8 @@ def validate_access_token(
 
 
 def get_user(
-    credentials: TokenSubject = Depends(validate_access_token),
-    users_service: UsersService = Depends(),
+    credentials: Annotated[TokenSubject, Depends(validate_access_token)],
+    users_service: Annotated[UsersService, Depends()],
 ) -> UserRead:
     user = users_service.get_user_by_id(credentials.user_id)
     if user.disabled:
@@ -31,7 +32,7 @@ def get_user(
 
 
 def role_required(*required_roles: Role) -> Callable:
-    def validate_user(user: UserRead = Depends(get_user)):
+    def validate_user(user: Annotated[UserRead, Depends(get_user)]):
         if user.role not in required_roles:
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
@@ -55,13 +56,27 @@ def authenticate_user(
 
 @inject
 def refresh_token(
+    users_service: Annotated[UsersService, Depends()],
     token_payload: JwtAuthorizationCredentials = Security(
         Provide[Container.refresh_token_backend]
     ),
-    users_service: UsersService = Depends(),
 ) -> JwtTokenPair:
     subject = TokenSubject.model_validate(token_payload.subject)
     user = get_user(subject, users_service)
+    return authenticate_user(user)
+
+
+def login_user(
+    login_form: LoginSchema,
+    users_service: Annotated[UsersService, Depends()],
+) -> JwtTokenPair:
+    try:
+        user = users_service.get_user_by_credentials(
+            login_form.username,
+            login_form.password,
+        )
+    except (UserNotFound, InvalidPassword) as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST) from exc
     return authenticate_user(user)
 
 

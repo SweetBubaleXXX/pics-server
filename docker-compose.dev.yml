@@ -3,7 +3,6 @@ version: "3.8"
 services:
   db:
     image: postgres:15-alpine
-    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:?}
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password

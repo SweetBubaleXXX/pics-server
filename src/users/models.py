@@ -3,6 +3,9 @@ from typing import Optional
 
 from sqlmodel import Enum, Field, SQLModel
 
+USERNAME_CONSTRAINTS = dict(min_length=5, max_length=20)
+PASSWORD_CONSTRAINTS = dict(min_length=8, max_length=30)
+
 
 class Role(StrEnum):
     USER = auto()
@@ -11,7 +14,7 @@ class Role(StrEnum):
 
 
 class UserBase(SQLModel):
-    username: str = Field(unique=True)
+    username: str = Field(unique=True, **USERNAME_CONSTRAINTS)
     role: Role = Field(sa_column=Enum(Role), default=Role.USER)
     disabled: bool = False
 
@@ -21,7 +24,7 @@ class UserRead(UserBase):
 
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(**PASSWORD_CONSTRAINTS)
 
 
 class User(UserBase, table=True):
