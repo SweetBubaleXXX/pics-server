@@ -9,7 +9,6 @@ from .db.service import Database
 class Container(DeclarativeContainer):
     wiring_config = WiringConfiguration(
         packages=[
-            ".auth",
             ".db",
             ".users",
         ],

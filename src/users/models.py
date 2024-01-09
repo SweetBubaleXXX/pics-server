@@ -1,7 +1,8 @@
 from enum import StrEnum, auto
-from typing import Optional
 
-from sqlmodel import Enum, Field, SQLModel
+from sqlmodel import Enum, Field, Relationship, SQLModel
+
+from ..images.models import Image, ImageLikes
 
 USERNAME_CONSTRAINTS = dict(min_length=4, max_length=20)
 PASSWORD_CONSTRAINTS = dict(min_length=8, max_length=30)
@@ -21,6 +22,8 @@ class UserBase(SQLModel):
 
 class UserRead(UserBase):
     id: int
+    own_images: list[Image]
+    liked_images: list[Image]
 
 
 class UserCreate(UserBase):
@@ -34,5 +37,11 @@ class UserUpdate(SQLModel):
 
 
 class User(UserBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     password: str
+
+    own_images: list[Image] = Relationship(back_populates="owner")
+    liked_images: list[Image] = Relationship(
+        back_populates="liked_by",
+        link_model=ImageLikes,
+    )
