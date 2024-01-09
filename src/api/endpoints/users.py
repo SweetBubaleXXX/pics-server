@@ -5,7 +5,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from src.auth.models import RegistrationSchema
-from src.auth.service import role_required
+from src.auth.service import get_user, role_required
 from src.db.session import DBSession
 from src.users.models import Role, UserCreate, UserRead, UserUpdate
 from src.users.service import UsersService
@@ -13,12 +13,17 @@ from src.users.service import UsersService
 router = APIRouter()
 
 
+@router.get("/me")
+def get_current_user(user: Annotated[UserRead, Depends(get_user)]) -> UserRead:
+    return user
+
+
 @router.get(
     "/",
     response_model=Page[UserRead],
     dependencies=[Depends(role_required(Role.EMPLOYEE, Role.ADMIN))],
 )
-def get_users(
+def list_users(
     db_session: DBSession,
     users_service: Annotated[UsersService, Depends()],
 ):
