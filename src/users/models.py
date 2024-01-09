@@ -23,8 +23,14 @@ class UserRead(UserBase):
     id: int
 
 
-class UserUpdate(UserBase):
+class UserCreate(UserBase):
     password: str = Field(**PASSWORD_CONSTRAINTS)
+
+
+class UserUpdate(SQLModel):
+    role: Role | None = None
+    disabled: bool | None = None
+    password: str | None = None
 
 
 class User(UserBase, table=True):

@@ -2,6 +2,7 @@ import functools
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi_pagination import add_pagination
 
 from .api.router import api_router
 from .containers import Container
@@ -24,5 +25,7 @@ def create_app() -> FastAPI:
     setup_exception_handlers(app)
 
     app.include_router(api_router)
+
+    add_pagination(app)
 
     return app

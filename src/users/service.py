@@ -6,11 +6,12 @@ from fastapi import Depends
 from passlib.context import CryptContext
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from ..containers import Container
 from ..db.session import DBSession
 from .exceptions import InvalidPassword, UserAlreadyExists, UserNotFound
-from .models import User, UserRead, UserUpdate
+from .models import User, UserCreate, UserRead, UserUpdate
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -50,7 +51,10 @@ class UsersService:
             raise InvalidPassword()
         return UserRead.model_validate(user)
 
-    def create_user(self, user: UserUpdate) -> UserRead:
+    def get_users_raw(self) -> SelectOfScalar[User]:
+        return select(User).order_by(User.username)
+
+    def create_user(self, user: UserCreate) -> UserRead:
         existing_user = self._session.exec(
             select(User).where(User.username == user.username)
         ).first()
@@ -62,6 +66,20 @@ class UsersService:
             password=hashed_password,
         )
         return self._save_user(user_for_save)
+
+    @raises_user_not_found
+    def update_user(self, user_id: int, user: UserUpdate) -> UserRead:
+        user_in_db = self._session.exec(select(User).where(User.id == user_id)).one()
+        user_updates = user.model_dump(exclude_unset=True)
+        for field, value in user_updates.items():
+            setattr(user_in_db, field, value)
+        return self._save_user(user_in_db)
+
+    @raises_user_not_found
+    def delete_user(self, user_id: int) -> None:
+        user = self._session.exec(select(User).where(User.id == user_id)).one()
+        self._session.delete(user)
+        self._session.commit()
 
     def _save_user(self, user: User) -> UserRead:
         self._session.add(user)
