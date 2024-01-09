@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlmodel import Enum, Field, SQLModel
 
-USERNAME_CONSTRAINTS = dict(min_length=5, max_length=20)
+USERNAME_CONSTRAINTS = dict(min_length=4, max_length=20)
 PASSWORD_CONSTRAINTS = dict(min_length=8, max_length=30)
 
 
@@ -23,7 +23,7 @@ class UserRead(UserBase):
     id: int
 
 
-class UserCreate(UserBase):
+class UserUpdate(UserBase):
     password: str = Field(**PASSWORD_CONSTRAINTS)
 
 

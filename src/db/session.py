@@ -9,10 +9,18 @@ from .service import Database
 
 
 @inject
+def _get_database(database: Database = Provide[Container.db]) -> Database:
+    return database
+
+
+def _get_session_manager() -> Session:
+    return _get_database().session()
+
+
 def get_db_session(
-    database: Annotated[Database, Depends(Provide[Container.db])],
+    session_manager: Annotated[Session, Depends(_get_session_manager)],
 ) -> Iterator[Session]:
-    with database.session() as session:
+    with session_manager as session:
         yield session
 
 
