@@ -19,6 +19,11 @@ TEST_DB_URL = "sqlite:///:memory:"
 
 
 @pytest.fixture(scope="session")
+def assets_directory():
+    return "tests/assets"
+
+
+@pytest.fixture(scope="session")
 def app():
     return create_app()
 

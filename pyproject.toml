@@ -21,6 +21,7 @@ psycopg = {extras = ["binary", "pool"], version = "^3.1.17"}
 fastapi-jwt = "^0.2.0"
 fastapi-pagination = "^0.12.14"
 pydantic-extra-types = "^2.3.0"
+aiofiles = "^23.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
