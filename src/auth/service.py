@@ -7,7 +7,8 @@ from ..config import access_token_backend, refresh_token_backend
 from ..users.exceptions import InvalidPassword, UserNotFound
 from ..users.models import Role, UserRead
 from ..users.service import UsersService
-from .models import JwtTokenPair, LoginSchema, TokenSubject
+from .models import JwtTokenPair, TokenSubject
+from .schemas import LoginSchema
 
 
 def validate_access_token(

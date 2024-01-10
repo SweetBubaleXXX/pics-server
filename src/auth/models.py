@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from ..users.models import PASSWORD_CONSTRAINTS, USERNAME_CONSTRAINTS, Role
+from ..users.models import Role
 
 
 class TokenSubject(BaseModel):
@@ -11,12 +11,3 @@ class TokenSubject(BaseModel):
 class JwtTokenPair(BaseModel):
     access_token: str
     refresh_token: str
-
-
-class LoginSchema(BaseModel):
-    username: str = Field(**USERNAME_CONSTRAINTS, pattern=r"^\w+$")
-    password: str = Field(**PASSWORD_CONSTRAINTS)
-
-
-class RegistrationSchema(LoginSchema):
-    pass

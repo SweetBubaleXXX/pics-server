@@ -1,5 +1,6 @@
 import os
 from abc import ABCMeta, abstractmethod
+from tempfile import SpooledTemporaryFile
 
 import aiofiles
 from fastapi import Response, UploadFile
@@ -8,7 +9,16 @@ from fastapi.responses import FileResponse
 from .exceptions import ImageNotFound
 from .models import ImageFile
 
-_CHUNK_SIZE = 1048576
+_TEMP_FILE_MAX_SIZE = 1_048_576
+_CHUNK_SIZE = 1_048_576
+
+
+async def copy_to_temp_file(file: UploadFile) -> SpooledTemporaryFile:
+    await file.seek(0)
+    temp_file = SpooledTemporaryFile(_TEMP_FILE_MAX_SIZE)
+    while chunk := await file.read(_CHUNK_SIZE):
+        temp_file.write(chunk)
+    return temp_file
 
 
 class ImageStorage(metaclass=ABCMeta):

@@ -63,6 +63,6 @@ class ImagePaletteColor(SQLModel, table=True):
         primary_key=True,
         foreign_key="imagefile.image_id",
     )
-    color: Color = Field(sa_column=Column(AutoString()))
+    color: Color = Field(sa_column=Column(AutoString(), primary_key=True))
 
     file: ImageFile | None = Relationship(back_populates="palette")

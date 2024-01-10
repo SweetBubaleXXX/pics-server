@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
-from src.auth.models import RegistrationSchema
+from src.auth.schemas import RegistrationSchema
 from src.auth.service import get_user, role_required
 from src.db.session import DBSession
 from src.users.models import Role, UserCreate, UserRead, UserUpdate
