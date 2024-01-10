@@ -1,10 +1,15 @@
 from colorthief import ColorThief
 from dependency_injector.wiring import Provide, inject
 from fastapi import BackgroundTasks, Depends, Response, UploadFile
+from sqlalchemy.orm import selectinload
+from sqlalchemy.util import greenlet_spawn
+from sqlmodel import select
 
 from ..config import Settings
 from ..containers import Container
+from ..db.exceptions import raises_on_not_found
 from ..db.session import DBSession
+from .exceptions import ImageNotFound
 from .models import Image, ImageFile, ImagePaletteColor
 from .storage import ImageStorage
 
@@ -24,11 +29,21 @@ class ImagesService:
 
         self._palette_color_count = settings.image_palette_color_count
 
+    @raises_on_not_found(ImageNotFound)
     def get_image_info(self, image_id: str) -> Image:
-        ...
+        image = self._session.exec(
+            select(Image)
+            .where(Image.id == image_id)
+            .options(selectinload("*").selectinload("*"))
+        ).one()
+        return image
 
-    def get_image_file(self, image_id: str) -> Response:
-        ...
+    @raises_on_not_found(ImageNotFound)
+    async def get_image_file(self, image_id: str) -> Response:
+        query = select(ImageFile).where(ImageFile.image_id == image_id)
+        query_result = await greenlet_spawn(self._session.exec, query)
+        file_metadata = query_result.one()
+        return await self._storage.load_image(file_metadata)
 
     def create_image(self, image: Image, file: UploadFile) -> Image:
         self._session.add(image)

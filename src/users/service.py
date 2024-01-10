@@ -1,31 +1,14 @@
-from functools import wraps
-from typing import Callable, ParamSpec, TypeVar
-
 from dependency_injector.wiring import Provide, inject
 from fastapi import Depends
 from passlib.context import CryptContext
-from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from ..containers import Container
+from ..db.exceptions import raises_on_not_found
 from ..db.session import DBSession
 from .exceptions import InvalidPassword, UserAlreadyExists, UserNotFound
 from .models import User, UserCreate, UserRead, UserUpdate
-
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def raises_user_not_found(func: Callable[P, T]) -> Callable[P, T]:
-    @wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        try:
-            return func(*args, **kwargs)
-        except NoResultFound as exc:
-            raise UserNotFound() from exc
-
-    return wrapper
 
 
 class UsersService:
@@ -38,12 +21,12 @@ class UsersService:
         self._session = db_session
         self._passlib_context = passlib_context
 
-    @raises_user_not_found
+    @raises_on_not_found(UserNotFound)
     def get_user_by_id(self, user_id: int) -> UserRead:
         user = self._session.exec(select(User).where(User.id == user_id)).one()
         return UserRead.model_validate(user)
 
-    @raises_user_not_found
+    @raises_on_not_found(UserNotFound)
     def get_user_by_credentials(self, username: str, password: str) -> UserRead:
         user = self._session.exec(select(User).where(User.username == username)).one()
         password_correct = self._passlib_context.verify(password, user.password)
@@ -67,7 +50,7 @@ class UsersService:
         )
         return self._save_user(user_for_save)
 
-    @raises_user_not_found
+    @raises_on_not_found(UserNotFound)
     def update_user(self, user_id: int, user: UserUpdate) -> UserRead:
         user_in_db = self._session.exec(select(User).where(User.id == user_id)).one()
         user_updates = user.model_dump(exclude_unset=True)
@@ -75,7 +58,7 @@ class UsersService:
             setattr(user_in_db, field, value)
         return self._save_user(user_in_db)
 
-    @raises_user_not_found
+    @raises_on_not_found(UserNotFound)
     def delete_user(self, user_id: int) -> None:
         user = self._session.exec(select(User).where(User.id == user_id)).one()
         self._session.delete(user)

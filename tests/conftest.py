@@ -3,9 +3,9 @@ from tempfile import TemporaryDirectory
 import pytest
 import pytest_asyncio
 from asgi_lifespan import LifespanManager
-from factory import Faker
+from factory import Faker, SubFactory
 from factory.alchemy import SQLAlchemyModelFactory
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from sqlalchemy import StaticPool
 from sqlmodel import Session
 
@@ -13,6 +13,8 @@ from src.config import Settings
 from src.containers import Container
 from src.db.service import Database
 from src.db.session import get_db_session
+from src.images.models import Image
+from src.images.service import ImagesService
 from src.images.storage import ImageStorage, LocalImageStorage
 from src.main import create_app
 from src.users.models import User
@@ -72,6 +74,11 @@ def override_db_session(app: FastAPI, db_session: Session):
 
 
 @pytest.fixture
+def background_tasks():
+    return BackgroundTasks()
+
+
+@pytest.fixture
 def image_storage_location():
     with TemporaryDirectory(prefix="pics-test-") as temp_dir_path:
         yield temp_dir_path
@@ -90,19 +97,44 @@ def override_image_storage(container: Container, image_storage: ImageStorage):
 
 
 @pytest.fixture
-def user_factory(db_session: Session):
-    class UserFactory(SQLAlchemyModelFactory):
-        username = Faker("name")
-        password = Faker("password")
-
-        class Meta:
-            model = User
-            sqlalchemy_session = db_session
-            sqlalchemy_session_persistence = "flush"
-
-    return UserFactory
+def images_service(db_session: Session, background_tasks: BackgroundTasks):
+    return ImagesService(db_session, background_tasks)
 
 
 @pytest.fixture
 def users_service(db_session: Session):
     return UsersService(db_session)
+
+
+@pytest.fixture
+def factory_meta_mixin(db_session: Session):
+    class FactoryMetaMixin:
+        sqlalchemy_session = db_session
+        sqlalchemy_session_persistence = "flush"
+
+    return FactoryMetaMixin
+
+
+@pytest.fixture
+def user_factory(factory_meta_mixin):
+    class UserFactory(SQLAlchemyModelFactory):
+        username = Faker("name")
+        password = Faker("password")
+
+        class Meta(factory_meta_mixin):
+            model = User
+
+    return UserFactory
+
+
+@pytest.fixture
+def image_factory(factory_meta_mixin, user_factory):
+    class ImageFactory(SQLAlchemyModelFactory):
+        title = Faker("word")
+        description = Faker("sentence")
+        owner = SubFactory(user_factory)
+
+        class Meta(factory_meta_mixin):
+            model = Image
+
+    return ImageFactory
