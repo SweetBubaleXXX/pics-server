@@ -1,12 +1,13 @@
 import secrets
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi_jwt import JwtAccessBearer, JwtRefreshBearerCookie
 from pydantic import AnyUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class _SettingsConfigMixin:
+class _SettingsModelConfigMixin:
     model_config = SettingsConfigDict(
         secrets_dir="/run/secrets",
         env_file=(".env", ".env.prod"),
@@ -14,12 +15,15 @@ class _SettingsConfigMixin:
     )
 
 
-class SecretKeySettings(_SettingsConfigMixin, BaseSettings):
+class SecretKeySettings(_SettingsModelConfigMixin, BaseSettings):
     value: str = Field(default_factory=secrets.token_hex)
 
 
-class Settings(_SettingsConfigMixin, BaseSettings):
+class Settings(_SettingsModelConfigMixin, BaseSettings):
     db_url: AnyUrl
+
+    image_storage_location: Path | AnyUrl = ".images/"
+    image_palette_color_count: int = 5
 
 
 SECRET_KEY = SecretKeySettings().value

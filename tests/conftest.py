@@ -1,3 +1,5 @@
+from tempfile import TemporaryDirectory
+
 import pytest
 import pytest_asyncio
 from asgi_lifespan import LifespanManager
@@ -11,6 +13,7 @@ from src.config import Settings
 from src.containers import Container
 from src.db.service import Database
 from src.db.session import get_db_session
+from src.images.storage import ImageStorage, LocalImageStorage
 from src.main import create_app
 from src.users.models import User
 from src.users.service import UsersService
@@ -66,6 +69,24 @@ def db_session(database: Database):
 @pytest.fixture(autouse=True)
 def override_db_session(app: FastAPI, db_session: Session):
     app.dependency_overrides[get_db_session] = lambda: db_session
+
+
+@pytest.fixture
+def image_storage_location():
+    with TemporaryDirectory(prefix="pics-test-") as temp_dir_path:
+        yield temp_dir_path
+
+
+@pytest.fixture
+def image_storage(image_storage_location: str):
+    return LocalImageStorage(image_storage_location)
+
+
+@pytest.fixture(autouse=True)
+def override_image_storage(container: Container, image_storage: ImageStorage):
+    container.image_storage.override(image_storage)
+    yield
+    container.image_storage.reset_override()
 
 
 @pytest.fixture
