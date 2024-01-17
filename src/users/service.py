@@ -34,7 +34,7 @@ class UsersService:
             raise InvalidPassword()
         return UserRead.model_validate(user)
 
-    def get_users_raw(self) -> SelectOfScalar[User]:
+    def get_users_query(self) -> SelectOfScalar[User]:
         return select(User).order_by(User.username)
 
     def create_user(self, user: UserCreate) -> UserRead:

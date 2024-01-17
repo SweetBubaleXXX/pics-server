@@ -27,8 +27,8 @@ def list_users(
     db_session: DBSession,
     users_service: Annotated[UsersService, Depends()],
 ):
-    raw_query = users_service.get_users_raw()
-    return paginate(db_session, raw_query)
+    query = users_service.get_users_query()
+    return paginate(db_session, query)
 
 
 @router.post("/")

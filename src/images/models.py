@@ -1,12 +1,15 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Annotated, Optional
 from uuid import UUID, uuid4
 
+from pydantic import AfterValidator
 from pydantic_extra_types.color import Color
-from sqlmodel import AutoString, Column, Field, Relationship, SQLModel, text
+from sqlmodel import Field, Relationship, SQLModel, text
 
 if TYPE_CHECKING:
     from ..users.models import User
+
+ColorField = Annotated[str, AfterValidator(lambda color: Color(color).as_hex())]
 
 
 class ImageLikes(SQLModel, table=True):
@@ -50,8 +53,8 @@ class ImageFile(SQLModel, table=True):
     size: int
     width: int | None = Field(default=None)
     height: int | None = Field(default=None)
-    dominant_color: Color | None = Field(default=None, sa_column=Column(AutoString()))
-    average_color: Color | None = Field(default=None, sa_column=Column(AutoString()))
+    dominant_color: str | None = None
+    average_color: str | None = None
 
     image: Image | None = Relationship(back_populates="file")
     palette: list["ImagePaletteColor"] = Relationship(back_populates="file")
@@ -63,6 +66,6 @@ class ImagePaletteColor(SQLModel, table=True):
         primary_key=True,
         foreign_key="imagefile.image_id",
     )
-    color: Color = Field(sa_column=Column(AutoString(), primary_key=True))
+    color: str
 
     file: ImageFile | None = Relationship(back_populates="palette")

@@ -16,7 +16,7 @@ class _SettingsModelConfigMixin:
 
 
 class SecretKeySettings(_SettingsModelConfigMixin, BaseSettings):
-    value: str = Field(default_factory=secrets.token_hex)
+    secret_key: str = Field(default_factory=secrets.token_hex)
 
 
 class Settings(_SettingsModelConfigMixin, BaseSettings):
@@ -26,7 +26,7 @@ class Settings(_SettingsModelConfigMixin, BaseSettings):
     image_palette_color_count: int = 5
 
 
-SECRET_KEY = SecretKeySettings().value
+SECRET_KEY = SecretKeySettings().secret_key
 
 
 access_token_backend = JwtAccessBearer(

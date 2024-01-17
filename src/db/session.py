@@ -9,12 +9,12 @@ from .service import Database
 
 
 @inject
-def _get_database(database: Database = Provide[Container.db]) -> Database:
+def get_database(database: Database = Provide[Container.db]) -> Database:
     return database
 
 
 def _get_session_manager() -> Session:
-    return _get_database().session()
+    return get_database().session()
 
 
 def get_db_session(

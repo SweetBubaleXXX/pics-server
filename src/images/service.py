@@ -1,19 +1,63 @@
 from io import IOBase
+from uuid import UUID
 
+import cv2
+import numpy as np
 from colorthief import ColorThief
 from dependency_injector.wiring import Provide, inject
 from fastapi import BackgroundTasks, Depends, Response, UploadFile
+from pydantic_extra_types.color import Color
 from sqlalchemy.orm import selectinload
 from sqlalchemy.util import greenlet_spawn
 from sqlmodel import select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from ..config import Settings
 from ..containers import Container
 from ..db.exceptions import raises_on_not_found
-from ..db.session import DBSession
+from ..db.session import DBSession, get_database
 from .exceptions import ImageNotFound
+from .filters import ImageFilter
 from .models import Image, ImageFile, ImagePaletteColor
 from .storage import ImageStorage, copy_to_temp_file
+
+
+def find_average_color(image_buffer: IOBase) -> Color:
+    image_buffer.seek(0)
+    content = np.frombuffer(image_buffer.read(), dtype=np.uint8)
+    image = cv2.imdecode(content, cv2.IMREAD_UNCHANGED)
+    average_color_per_row = np.mean(image, axis=0)
+    average_color = np.mean(average_color_per_row, axis=0)
+    b, g, r = average_color
+    return Color((r, g, b)).as_hex()
+
+
+@inject
+def process_image(
+    image_id: UUID,
+    content: IOBase,
+    settings: Settings = Provide[Container.settings],
+) -> None:
+    with get_database().session() as session:
+        file_metadata = session.exec(
+            select(ImageFile).where(ImageFile.image_id == image_id)
+        ).one()
+        color_thief = ColorThief(content)
+        file_metadata.width, file_metadata.height = color_thief.image.size
+        file_metadata.dominant_color = Color(color_thief.get_color()).as_hex()
+        file_metadata.average_color = find_average_color(content)
+        palette = color_thief.get_palette(
+            color_count=settings.image_palette_color_count
+        )
+        for color in palette:
+            file_metadata.palette.append(
+                ImagePaletteColor(
+                    image_id=file_metadata.image_id,
+                    color=Color(color).as_hex(),
+                )
+            )
+        session.add(file_metadata)
+        session.commit()
 
 
 class ImagesService:
@@ -23,13 +67,10 @@ class ImagesService:
         db_session: DBSession,
         background_task: BackgroundTasks,
         storage: ImageStorage = Depends(Provide[Container.image_storage]),
-        settings: Settings = Depends(Provide[Container.settings]),
     ) -> None:
         self._session = db_session
         self._background_tasks = background_task
         self._storage = storage
-
-        self._palette_color_count = settings.image_palette_color_count
 
     @raises_on_not_found(ImageNotFound)
     def get_image_details(self, image_id: str) -> Image:
@@ -47,6 +88,10 @@ class ImagesService:
         file_metadata = query_result.one()
         return await self._storage.load_image(file_metadata)
 
+    def filter_images_query(self, image_filter: ImageFilter) -> SelectOfScalar[Image]:
+        query = select(Image).options(selectinload("*").selectinload("*"))
+        return image_filter.filter(query)
+
     async def create_image(self, image: Image, file: UploadFile) -> Image:
         await greenlet_spawn(self._session.add, image)
         await self._save_image(image, file)
@@ -61,17 +106,7 @@ class ImagesService:
         ...
 
     async def _save_image(self, image: Image, file: UploadFile) -> None:
-        image_metadata = await self._storage.save_image(str(image.id), file)
-        await greenlet_spawn(self._session.add, image_metadata)
+        file_metadata = await self._storage.save_image(str(image.id), file)
+        await greenlet_spawn(self._session.add, file_metadata)
         temp_file = await copy_to_temp_file(file)
-        self._background_tasks.add_task(self._process_image, image_metadata, temp_file)
-
-    def _process_image(self, image_metadata: ImageFile, content: IOBase) -> None:
-        color_thief = ColorThief(content)
-        image_metadata.width, image_metadata.height = color_thief.image.size
-        image_metadata.dominant_color = color_thief.get_color()
-        palette = color_thief.get_palette(color_count=self._palette_color_count)
-        for color in palette:
-            image_metadata.palette.append(ImagePaletteColor(color=color))
-        self._session.add(image_metadata)
-        self._session.commit()
+        self._background_tasks.add_task(process_image, image.id, temp_file)
