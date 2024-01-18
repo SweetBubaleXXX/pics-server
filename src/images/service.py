@@ -1,5 +1,4 @@
 from io import IOBase
-from uuid import UUID
 
 import cv2
 import numpy as np
@@ -19,6 +18,7 @@ from ..db.session import DBSession, get_database
 from .exceptions import ImageNotFound
 from .filters import ImageFilter
 from .models import Image, ImageFile, ImagePaletteColor
+from .schemas import ImageUpdateSchema
 from .storage import ImageStorage, copy_to_temp_file
 
 
@@ -34,7 +34,7 @@ def find_average_color(image_buffer: IOBase) -> Color:
 
 @inject
 def process_image(
-    image_id: UUID,
+    image_id: str,
     content: IOBase,
     settings: Settings = Provide[Container.settings],
 ) -> None:
@@ -46,16 +46,12 @@ def process_image(
         file_metadata.width, file_metadata.height = color_thief.image.size
         file_metadata.dominant_color = Color(color_thief.get_color()).as_hex()
         file_metadata.average_color = find_average_color(content)
+        file_metadata.palette.clear()
         palette = color_thief.get_palette(
             color_count=settings.image_palette_color_count
         )
         for color in palette:
-            file_metadata.palette.append(
-                ImagePaletteColor(
-                    image_id=file_metadata.image_id,
-                    color=Color(color).as_hex(),
-                )
-            )
+            file_metadata.palette.append(ImagePaletteColor(color=Color(color).as_hex()))
         session.add(file_metadata)
         session.commit()
 
@@ -94,19 +90,34 @@ class ImagesService:
 
     async def create_image(self, image: Image, file: UploadFile) -> Image:
         await greenlet_spawn(self._session.add, image)
-        await self._save_image(image, file)
+        await self._save_image_file(str(image.id), file)
         await greenlet_spawn(self._session.commit)
         await greenlet_spawn(self._session.refresh, image)
         return image
 
-    def update_image_details(self) -> ...:
-        ...
+    @raises_on_not_found(ImageNotFound)
+    def update_image_details(
+        self, image_id: str, updated_details: ImageUpdateSchema
+    ) -> Image:
+        image_in_db = self.get_image_details(image_id)
+        image_updates = updated_details.model_dump(exclude_unset=True)
+        for field, value in image_updates.items():
+            setattr(image_in_db, field, value)
+        self._session.add(image_in_db)
+        self._session.commit()
+        self._session.refresh(image_in_db)
+        return image_in_db
 
-    def update_image_file(self, image_id: str, file: UploadFile) -> None:
-        ...
+    @raises_on_not_found(ImageNotFound)
+    async def update_image_file(self, image_id: str, file: UploadFile) -> None:
+        query = select(ImageFile).where(ImageFile.image_id == image_id)
+        (await greenlet_spawn(self._session.exec, query)).one()
+        await self._save_image_file(image_id, file)
+        await greenlet_spawn(self._session.commit)
 
-    async def _save_image(self, image: Image, file: UploadFile) -> None:
-        file_metadata = await self._storage.save_image(str(image.id), file)
-        await greenlet_spawn(self._session.add, file_metadata)
+    async def _save_image_file(self, image_id: str, file: UploadFile) -> ImageFile:
+        file_metadata = await self._storage.save_image(image_id, file)
+        await greenlet_spawn(self._session.merge, file_metadata)
         temp_file = await copy_to_temp_file(file)
-        self._background_tasks.add_task(process_image, image.id, temp_file)
+        self._background_tasks.add_task(process_image, image_id, temp_file)
+        return file_metadata

@@ -57,7 +57,10 @@ class ImageFile(SQLModel, table=True):
     average_color: str | None = None
 
     image: Image | None = Relationship(back_populates="file")
-    palette: list["ImagePaletteColor"] = Relationship(back_populates="file")
+    palette: list["ImagePaletteColor"] = Relationship(
+        back_populates="file",
+        sa_relationship_kwargs={"cascade": "all,delete,delete-orphan"},
+    )
 
 
 class ImagePaletteColor(SQLModel, table=True):
@@ -66,6 +69,6 @@ class ImagePaletteColor(SQLModel, table=True):
         primary_key=True,
         foreign_key="imagefile.image_id",
     )
-    color: str
+    color: str = Field(primary_key=True)
 
     file: ImageFile | None = Relationship(back_populates="palette")

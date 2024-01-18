@@ -22,8 +22,6 @@ class UserBase(SQLModel):
 
 class UserRead(UserBase):
     id: int
-    own_images: list[Image]
-    liked_images: list[Image]
 
 
 class UserCreate(UserBase):

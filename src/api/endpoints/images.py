@@ -1,5 +1,4 @@
-from operator import attrgetter
-from typing import Annotated, Iterable
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi_filter import FilterDepends
@@ -10,32 +9,13 @@ from src.auth.service import AuthenticationRequired, get_user
 from src.db.session import DBSession
 from src.images.filters import ImageFilter
 from src.images.models import Image
-from src.images.schemas import ImageDetailsSchema, ImageIdSchema
+from src.images.schemas import ImageDetailsSchema, ImageIdSchema, ImageUpdateSchema
 from src.images.service import ImagesService
 from src.users.models import UserRead
 
 from ..dependencies import validate_image_type
 
 router = APIRouter(dependencies=[AuthenticationRequired])
-
-
-def transform_image_details(images: Iterable[Image]) -> Iterable[ImageDetailsSchema]:
-    return [
-        ImageDetailsSchema(
-            id=str(image.id),
-            owner=image.owner.username,
-            title=image.title,
-            description=image.description,
-            size=image.file.size,
-            width=image.file.width,
-            height=image.file.height,
-            dominant_color=image.file.dominant_color,
-            average_color=image.file.average_color,
-            palette=map(attrgetter("color"), image.file.palette),
-            created_at=image.created_at,
-        )
-        for image in images
-    ]
 
 
 @router.get(
@@ -51,7 +31,7 @@ async def list_images(
     return paginate(
         db_session,
         query,
-        transformer=transform_image_details,
+        transformer=lambda images: list(map(ImageDetailsSchema.from_model, images)),
     )
 
 
@@ -70,3 +50,23 @@ async def upload_image(
     image_details = Image(owner_id=owner.id, title=title, description=description)
     image = await images_service.create_image(image_details, file)
     return ImageIdSchema(image_id=str(image.id))
+
+
+@router.patch("/{image_id}/")
+def update_image_info(
+    image_id: str,
+    images_service: Annotated[ImagesService, Depends()],
+    image_update: ImageUpdateSchema,
+) -> ImageDetailsSchema:
+    updated_image = images_service.update_image_details(image_id, image_update)
+    return ImageDetailsSchema.from_model(updated_image)
+
+
+@router.post("/{image_id}/upload", dependencies=[Depends(validate_image_type)])
+async def change_image(
+    image_id: str,
+    images_service: Annotated[ImagesService, Depends()],
+    file: UploadFile,
+) -> ImageIdSchema:
+    await images_service.update_image_file(image_id, file)
+    return ImageIdSchema(image_id=image_id)
