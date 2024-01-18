@@ -34,7 +34,7 @@ def test_update_image_details(
 ):
     existing_image: Image = image_factory()
     image_update = ImageUpdateSchema(title="new title", description="new description")
-    images_service.update_image_details(str(existing_image.id), image_update)
+    images_service.update_image_details(existing_image, image_update)
     image_in_db = db_session.exec(
         select(Image).where(Image.id == existing_image.id)
     ).one()

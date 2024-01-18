@@ -13,7 +13,7 @@ from src.images.schemas import ImageDetailsSchema, ImageIdSchema, ImageUpdateSch
 from src.images.service import ImagesService
 from src.users.models import UserRead
 
-from ..dependencies import validate_image_type
+from ..dependencies import get_image_by_id, is_own_image, validate_image_type
 
 router = APIRouter(dependencies=[AuthenticationRequired])
 
@@ -52,17 +52,23 @@ async def upload_image(
     return ImageIdSchema(image_id=str(image.id))
 
 
-@router.patch("/{image_id}/")
+@router.patch(
+    "/{image_id}/",
+    dependencies=[Depends(is_own_image)],
+)
 def update_image_info(
-    image_id: str,
+    image: Annotated[Image, Depends(get_image_by_id)],
     images_service: Annotated[ImagesService, Depends()],
     image_update: ImageUpdateSchema,
 ) -> ImageDetailsSchema:
-    updated_image = images_service.update_image_details(image_id, image_update)
+    updated_image = images_service.update_image_details(image, image_update)
     return ImageDetailsSchema.from_model(updated_image)
 
 
-@router.post("/{image_id}/upload", dependencies=[Depends(validate_image_type)])
+@router.post(
+    "/{image_id}/upload",
+    dependencies=[Depends(validate_image_type), Depends(is_own_image)],
+)
 async def change_image(
     image_id: str,
     images_service: Annotated[ImagesService, Depends()],
@@ -70,3 +76,15 @@ async def change_image(
 ) -> ImageIdSchema:
     await images_service.update_image_file(image_id, file)
     return ImageIdSchema(image_id=image_id)
+
+
+@router.delete(
+    "/{image_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(is_own_image)],
+)
+def delete_image(
+    image: Annotated[Image, Depends(get_image_by_id)],
+    images_service: Annotated[ImagesService, Depends()],
+):
+    images_service.delete_image(image)

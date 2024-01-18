@@ -42,5 +42,5 @@ class ImageDetailsSchema(BaseModel):
 
 
 class ImageUpdateSchema(BaseModel):
-    title: str
+    title: str | None = None
     description: str | None = None

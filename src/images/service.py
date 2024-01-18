@@ -95,25 +95,27 @@ class ImagesService:
         await greenlet_spawn(self._session.refresh, image)
         return image
 
-    @raises_on_not_found(ImageNotFound)
     def update_image_details(
-        self, image_id: str, updated_details: ImageUpdateSchema
+        self,
+        image: Image,
+        updated_details: ImageUpdateSchema,
     ) -> Image:
-        image_in_db = self.get_image_details(image_id)
         image_updates = updated_details.model_dump(exclude_unset=True)
         for field, value in image_updates.items():
-            setattr(image_in_db, field, value)
-        self._session.add(image_in_db)
+            setattr(image, field, value)
+        self._session.add(image)
         self._session.commit()
-        self._session.refresh(image_in_db)
-        return image_in_db
+        self._session.refresh(image)
+        return image
 
     @raises_on_not_found(ImageNotFound)
     async def update_image_file(self, image_id: str, file: UploadFile) -> None:
-        query = select(ImageFile).where(ImageFile.image_id == image_id)
-        (await greenlet_spawn(self._session.exec, query)).one()
         await self._save_image_file(image_id, file)
         await greenlet_spawn(self._session.commit)
+
+    def delete_image(self, image: Image) -> None:
+        self._session.delete(image)
+        self._session.commit()
 
     async def _save_image_file(self, image_id: str, file: UploadFile) -> ImageFile:
         file_metadata = await self._storage.save_image(image_id, file)

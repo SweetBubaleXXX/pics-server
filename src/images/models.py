@@ -38,7 +38,10 @@ class Image(SQLModel, table=True):
     )
     file: Optional["ImageFile"] = Relationship(
         back_populates="image",
-        sa_relationship_kwargs={"uselist": False},
+        sa_relationship_kwargs={
+            "uselist": False,
+            "cascade": "all,delete,delete-orphan",
+        },
     )
 
 
