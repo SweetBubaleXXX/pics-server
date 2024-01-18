@@ -1,4 +1,5 @@
 from io import IOBase
+from uuid import UUID
 
 import cv2
 import numpy as np
@@ -10,6 +11,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.util import greenlet_spawn
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
+
+from src.users.models import User
 
 from ..config import Settings
 from ..containers import Container
@@ -69,7 +72,7 @@ class ImagesService:
         self._storage = storage
 
     @raises_on_not_found(ImageNotFound)
-    def get_image_details(self, image_id: str) -> Image:
+    def get_image_details(self, image_id: str | UUID) -> Image:
         image = self._session.exec(
             select(Image)
             .where(Image.id == image_id)
@@ -78,7 +81,7 @@ class ImagesService:
         return image
 
     @raises_on_not_found(ImageNotFound)
-    async def get_image_file(self, image_id: str) -> Response:
+    async def get_image_file(self, image_id: str | UUID) -> Response:
         query = select(ImageFile).where(ImageFile.image_id == image_id)
         query_result = await greenlet_spawn(self._session.exec, query)
         file_metadata = query_result.one()
@@ -112,6 +115,13 @@ class ImagesService:
     async def update_image_file(self, image_id: str, file: UploadFile) -> None:
         await self._save_image_file(image_id, file)
         await greenlet_spawn(self._session.commit)
+
+    @raises_on_not_found(ImageNotFound)
+    def like_image(self, image_id: str | UUID, user_id: int) -> None:
+        image = self._session.exec(select(Image).where(Image.id == image_id)).one()
+        user = self._session.exec(select(User).where(User.id == user_id)).one()
+        if user not in image.liked_by:
+            image.liked_by.append(user)
 
     def delete_image(self, image: Image) -> None:
         self._session.delete(image)

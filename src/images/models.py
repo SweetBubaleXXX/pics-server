@@ -1,24 +1,14 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, Optional
+from typing import Annotated, Optional
 from uuid import UUID, uuid4
 
 from pydantic import AfterValidator
 from pydantic_extra_types.color import Color
 from sqlmodel import Field, Relationship, SQLModel, text
 
-if TYPE_CHECKING:
-    from ..users.models import User
+from ..users.models import User, UserImageLikes
 
 ColorField = Annotated[str, AfterValidator(lambda color: Color(color).as_hex())]
-
-
-class ImageLikes(SQLModel, table=True):
-    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    image_id: UUID | None = Field(
-        default=None,
-        foreign_key="image.id",
-        primary_key=True,
-    )
 
 
 class Image(SQLModel, table=True):
@@ -32,9 +22,9 @@ class Image(SQLModel, table=True):
         }
     )
 
-    owner: Optional["User"] = Relationship(back_populates="own_images")
-    liked_by: list["User"] = Relationship(
-        back_populates="liked_images", link_model=ImageLikes
+    owner: Optional[User] = Relationship(back_populates="own_images")
+    liked_by: list[User] = Relationship(
+        back_populates="liked_images", link_model=UserImageLikes
     )
     file: Optional["ImageFile"] = Relationship(
         back_populates="image",

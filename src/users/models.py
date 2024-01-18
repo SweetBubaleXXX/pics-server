@@ -1,8 +1,11 @@
 from enum import StrEnum, auto
+from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
-from ..images.models import Image, ImageLikes
+if TYPE_CHECKING:
+    from ..images.models import Image
 
 USERNAME_CONSTRAINTS = dict(min_length=4, max_length=20)
 PASSWORD_CONSTRAINTS = dict(min_length=8, max_length=30)
@@ -34,12 +37,21 @@ class UserUpdate(SQLModel):
     password: str | None = None
 
 
+class UserImageLikes(SQLModel, table=True):
+    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    image_id: UUID | None = Field(
+        default=None,
+        foreign_key="image.id",
+        primary_key=True,
+    )
+
+
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     password: str
 
-    own_images: list[Image] = Relationship(back_populates="owner")
-    liked_images: list[Image] = Relationship(
+    own_images: list["Image"] = Relationship(back_populates="owner")
+    liked_images: list["Image"] = Relationship(
         back_populates="liked_by",
-        link_model=ImageLikes,
+        link_model=UserImageLikes,
     )
