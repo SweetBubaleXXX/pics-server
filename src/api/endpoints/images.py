@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, UploadFile, status
+from fastapi import APIRouter, Depends, Form, Response, UploadFile, status
 from fastapi_filter import FilterDepends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
@@ -87,6 +87,14 @@ def remove_like(
     images_service: Annotated[ImagesService, Depends()],
 ):
     images_service.remove_like(image, user)
+
+
+@router.get("/{image_id}/")
+async def download_image(
+    image_id: str,
+    images_service: Annotated[ImagesService, Depends()],
+) -> Response:
+    return await images_service.get_image_file(image_id)
 
 
 @router.patch(

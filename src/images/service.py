@@ -83,7 +83,7 @@ class ImagesService:
 
     @raises_on_not_found(ImageNotFound)
     async def get_image_file(self, image_id: str | UUID) -> Response:
-        file_metadata = await greenlet_spawn(self._session.get_one, Image, image_id)
+        file_metadata = await greenlet_spawn(self._session.get_one, ImageFile, image_id)
         return await self._storage.load_image(file_metadata)
 
     def filter_images_query(self, image_filter: ImageFilter) -> SelectOfScalar[Image]:
