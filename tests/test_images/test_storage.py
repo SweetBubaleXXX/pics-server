@@ -82,3 +82,10 @@ async def test_load_image_not_found(image_storage: ImageStorage):
     metadata = ImageFile(image_id=uuid.uuid4())
     with pytest.raises(ImageNotFound):
         await image_storage.load_image(metadata)
+
+
+@pytest.mark.asyncio
+async def test_delete_image_not_found(image_storage: ImageStorage):
+    metadata = ImageFile(image_id=uuid.uuid4())
+    with pytest.raises(ImageNotFound):
+        await image_storage.delete_image(metadata)

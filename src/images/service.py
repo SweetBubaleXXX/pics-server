@@ -116,6 +116,7 @@ class ImagesService:
         await greenlet_spawn(self._session.commit)
 
     def delete_image(self, image: Image) -> None:
+        self._storage.delete_image(image.file)
         self._session.delete(image)
         self._session.commit()
 

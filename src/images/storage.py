@@ -1,6 +1,7 @@
 import os
 from abc import ABCMeta, abstractmethod
 from tempfile import SpooledTemporaryFile
+from uuid import UUID
 
 import aiofiles
 from fastapi import Response, UploadFile
@@ -30,6 +31,10 @@ class ImageStorage(metaclass=ABCMeta):
     async def load_image(self, file_metadata: ImageFile) -> Response:
         ...
 
+    @abstractmethod
+    async def delete_image(self, file_metadata: ImageFile) -> None:
+        ...
+
     def extract_file_metadata(self, image_id: str, file: UploadFile) -> ImageFile:
         return ImageFile(
             image_id=image_id,
@@ -52,7 +57,7 @@ class LocalImageStorage(ImageStorage):
         return file_metadata
 
     async def load_image(self, file_metadata: ImageFile) -> Response:
-        image_path = self._get_image_path(str(file_metadata.image_id))
+        image_path = self._get_image_path(file_metadata.image_id)
         if not os.path.exists(image_path):
             raise ImageNotFound()
         return FileResponse(
@@ -61,5 +66,11 @@ class LocalImageStorage(ImageStorage):
             filename=file_metadata.filename,
         )
 
-    def _get_image_path(self, image_id: str) -> str:
-        return os.path.join(self.storage_location, image_id)
+    async def delete_image(self, file_metadata: ImageFile) -> None:
+        image_path = self._get_image_path(file_metadata.image_id)
+        if not os.path.exists(image_path):
+            raise ImageNotFound()
+        os.remove(image_path)
+
+    def _get_image_path(self, image_id: str | UUID) -> str:
+        return os.path.join(self.storage_location, str(image_id))
