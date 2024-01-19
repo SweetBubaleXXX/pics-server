@@ -7,6 +7,7 @@ from src.images.exceptions import ImageNotFound
 from src.images.models import Image
 from src.images.schemas import ImageUpdateSchema
 from src.images.service import ImagesService
+from src.users.exceptions import UserNotFound
 from src.users.models import User
 
 
@@ -51,11 +52,30 @@ def test_like_image(
 ):
     image: Image = image_factory()
     user: User = user_factory()
-    images_service.like_image(image.id, user.id)
+    images_service.like_image(image, user)
     image_in_db = db_session.exec(select(Image).where(Image.id == image.id)).one()
     assert user in image_in_db.liked_by
 
 
-def test_like_image_not_found(images_service: ImagesService):
-    with pytest.raises(ImageNotFound):
-        images_service.like_image(uuid.uuid4(), 123)
+def test_remove_like(
+    db_session: Session,
+    images_service: ImagesService,
+    image_factory,
+    user_factory,
+):
+    image: Image = image_factory()
+    user: User = user_factory(liked_images=[image])
+    images_service.remove_like(image, user)
+    image_in_db = db_session.exec(select(Image).where(Image.id == image.id)).one()
+    assert user not in image_in_db.liked_by
+
+
+def test_remove_like_not_found(
+    images_service: ImagesService,
+    image_factory,
+    user_factory,
+):
+    image: Image = image_factory()
+    user: User = user_factory()
+    with pytest.raises(UserNotFound):
+        images_service.remove_like(image, user)

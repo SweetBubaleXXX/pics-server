@@ -18,6 +18,7 @@ from ..config import Settings
 from ..containers import Container
 from ..db.exceptions import raises_on_not_found
 from ..db.session import DBSession, get_database
+from ..users.exceptions import UserNotFound
 from .exceptions import ImageNotFound
 from .filters import ImageFilter
 from .models import Image, ImageFile, ImagePaletteColor
@@ -82,9 +83,7 @@ class ImagesService:
 
     @raises_on_not_found(ImageNotFound)
     async def get_image_file(self, image_id: str | UUID) -> Response:
-        query = select(ImageFile).where(ImageFile.image_id == image_id)
-        query_result = await greenlet_spawn(self._session.exec, query)
-        file_metadata = query_result.one()
+        file_metadata = await greenlet_spawn(self._session.get_one, Image, image_id)
         return await self._storage.load_image(file_metadata)
 
     def filter_images_query(self, image_filter: ImageFilter) -> SelectOfScalar[Image]:
@@ -116,15 +115,24 @@ class ImagesService:
         await self._save_image_file(image_id, file)
         await greenlet_spawn(self._session.commit)
 
-    @raises_on_not_found(ImageNotFound)
-    def like_image(self, image_id: str | UUID, user_id: int) -> None:
-        image = self._session.exec(select(Image).where(Image.id == image_id)).one()
-        user = self._session.exec(select(User).where(User.id == user_id)).one()
-        if user not in image.liked_by:
-            image.liked_by.append(user)
-
     def delete_image(self, image: Image) -> None:
         self._session.delete(image)
+        self._session.commit()
+
+    def get_liked_images_query(self, user: User) -> list[Image]:
+        return select(Image).join(Image.liked_by).where(User.id == user.id)
+
+    def like_image(self, image: Image, user: User) -> None:
+        if user not in image.liked_by:
+            image.liked_by.append(user)
+        self._session.add(image)
+        self._session.commit()
+
+    def remove_like(self, image: Image, user: User) -> None:
+        if user not in image.liked_by:
+            raise UserNotFound("User has not liked this image")
+        image.liked_by.remove(user)
+        self._session.add(image)
         self._session.commit()
 
     async def _save_image_file(self, image_id: str, file: UploadFile) -> ImageFile:

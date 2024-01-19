@@ -3,7 +3,7 @@ from factory import Factory
 from sqlmodel import Session, select
 
 from src.users import exceptions
-from src.users.models import User, UserCreate, UserRead, UserUpdate
+from src.users.models import User, UserCreate, UserUpdate
 from src.users.service import UsersService
 
 
@@ -11,7 +11,6 @@ def test_get_user_by_id(user_factory: Factory, users_service: UsersService):
     user: User = user_factory()
     found_user = users_service.get_user_by_id(user.id)
     assert found_user.username == user.username
-    assert isinstance(found_user, UserRead)
 
 
 def test_get_user_by_id_not_found(users_service: UsersService):

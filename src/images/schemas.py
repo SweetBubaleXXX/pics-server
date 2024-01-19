@@ -1,6 +1,6 @@
 from datetime import datetime
 from operator import attrgetter
-from typing import Self
+from typing import Iterable, Self
 
 from pydantic import BaseModel
 
@@ -39,6 +39,10 @@ class ImageDetailsSchema(BaseModel):
             palette=map(attrgetter("color"), instance.file.palette),
             created_at=instance.created_at,
         )
+
+    @classmethod
+    def from_model_bulk(cls, instances: Iterable[Image]) -> list[Self]:
+        return [cls.from_model(image) for image in instances]
 
 
 class ImageUpdateSchema(BaseModel):

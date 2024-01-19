@@ -8,7 +8,7 @@ from ..containers import Container
 from ..db.exceptions import raises_on_not_found
 from ..db.session import DBSession
 from .exceptions import InvalidPassword, UserAlreadyExists, UserNotFound
-from .models import User, UserCreate, UserRead, UserUpdate
+from .models import User, UserCreate, UserUpdate
 
 
 class UsersService:
@@ -22,22 +22,21 @@ class UsersService:
         self._passlib_context = passlib_context
 
     @raises_on_not_found(UserNotFound)
-    def get_user_by_id(self, user_id: int) -> UserRead:
-        user = self._session.exec(select(User).where(User.id == user_id)).one()
-        return UserRead.model_validate(user)
+    def get_user_by_id(self, user_id: int) -> User:
+        return self._session.get_one(User, user_id)
 
     @raises_on_not_found(UserNotFound)
-    def get_user_by_credentials(self, username: str, password: str) -> UserRead:
+    def get_user_by_credentials(self, username: str, password: str) -> User:
         user = self._session.exec(select(User).where(User.username == username)).one()
         password_correct = self._passlib_context.verify(password, user.password)
         if not password_correct:
             raise InvalidPassword()
-        return UserRead.model_validate(user)
+        return user
 
     def get_users_query(self) -> SelectOfScalar[User]:
         return select(User).order_by(User.username)
 
-    def create_user(self, user: UserCreate) -> UserRead:
+    def create_user(self, user: UserCreate) -> User:
         existing_user = self._session.exec(
             select(User).where(User.username == user.username)
         ).first()
@@ -51,8 +50,8 @@ class UsersService:
         return self._save_user(user_for_save)
 
     @raises_on_not_found(UserNotFound)
-    def update_user(self, user_id: int, user: UserUpdate) -> UserRead:
-        user_in_db = self._session.exec(select(User).where(User.id == user_id)).one()
+    def update_user(self, user_id: int, user: UserUpdate) -> User:
+        user_in_db = self._session.get_one(User, user_id)
         user_updates = user.model_dump(exclude_unset=True)
         for field, value in user_updates.items():
             setattr(user_in_db, field, value)
@@ -60,12 +59,12 @@ class UsersService:
 
     @raises_on_not_found(UserNotFound)
     def delete_user(self, user_id: int) -> None:
-        user = self._session.exec(select(User).where(User.id == user_id)).one()
+        user = self._session.get_one(User, user_id)
         self._session.delete(user)
         self._session.commit()
 
-    def _save_user(self, user: User) -> UserRead:
+    def _save_user(self, user: User) -> User:
         self._session.add(user)
         self._session.commit()
         self._session.refresh(user)
-        return UserRead.model_validate(user)
+        return user

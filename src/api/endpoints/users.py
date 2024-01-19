@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, status
 from fastapi_pagination import Page
@@ -7,14 +7,14 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from src.auth.schemas import RegistrationSchema
 from src.auth.service import get_user, role_required
 from src.db.session import DBSession
-from src.users.models import Role, UserCreate, UserRead, UserUpdate
+from src.users.models import Role, User, UserCreate, UserRead, UserUpdate
 from src.users.service import UsersService
 
 router = APIRouter()
 
 
-@router.get("/me")
-def get_current_user(user: Annotated[UserRead, Depends(get_user)]) -> UserRead:
+@router.get("/me", response_model=UserRead)
+def get_current_user(user: Annotated[User, Depends(get_user)]) -> Any:
     return user
 
 
@@ -31,35 +31,37 @@ def list_users(
     return paginate(db_session, query)
 
 
-@router.post("/")
+@router.post("/", response_model=UserRead)
 def create_user(
     credentials: RegistrationSchema,
     users_service: Annotated[UsersService, Depends()],
-) -> UserRead:
+) -> Any:
     user = UserCreate.model_validate(credentials)
     return users_service.create_user(user)
 
 
 @router.get(
     "/{user_id}",
+    response_model=UserRead,
     dependencies=[Depends(role_required(Role.EMPLOYEE, Role.ADMIN))],
 )
 def read_user(
     user_id: int,
     users_service: Annotated[UsersService, Depends()],
-) -> UserRead:
+) -> Any:
     return users_service.get_user_by_id(user_id)
 
 
 @router.patch(
     "/{user_id}",
+    response_model=UserRead,
     dependencies=[Depends(role_required(Role.ADMIN))],
 )
 def update_user(
     user_id: int,
     user_update: UserUpdate,
     users_service: Annotated[UsersService, Depends()],
-) -> UserRead:
+) -> Any:
     return users_service.update_user(user_id, user_update)
 
 
@@ -71,5 +73,5 @@ def update_user(
 def delete_user(
     user_id: int,
     users_service: Annotated[UsersService, Depends()],
-):
+) -> None:
     users_service.delete_user(user_id)

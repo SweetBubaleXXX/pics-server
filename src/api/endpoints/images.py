@@ -11,7 +11,7 @@ from src.images.filters import ImageFilter
 from src.images.models import Image
 from src.images.schemas import ImageDetailsSchema, ImageIdSchema, ImageUpdateSchema
 from src.images.service import ImagesService
-from src.users.models import UserRead
+from src.users.models import User
 
 from ..dependencies import get_image_by_id, is_own_image, validate_image_type
 
@@ -31,7 +31,7 @@ async def list_images(
     return paginate(
         db_session,
         query,
-        transformer=lambda images: list(map(ImageDetailsSchema.from_model, images)),
+        transformer=ImageDetailsSchema.from_model_bulk,
     )
 
 
@@ -41,15 +41,52 @@ async def list_images(
     dependencies=[Depends(validate_image_type)],
 )
 async def upload_image(
-    owner: Annotated[UserRead, Depends(get_user)],
+    owner: Annotated[User, Depends(get_user)],
     images_service: Annotated[ImagesService, Depends()],
     file: UploadFile,
     title: Annotated[str, Form()],
     description: str | None = Form(default=None),
 ) -> ImageIdSchema:
-    image_details = Image(owner_id=owner.id, title=title, description=description)
+    image_details = Image(owner=owner, title=title, description=description)
     image = await images_service.create_image(image_details, file)
     return ImageIdSchema(image_id=str(image.id))
+
+
+@router.get(
+    "/liked",
+    response_model=Page[ImageDetailsSchema],
+)
+async def list_liked_images(
+    user: Annotated[User, Depends(get_user)],
+    db_session: DBSession,
+    image_filter: Annotated[ImageFilter, FilterDepends(ImageFilter)],
+    images_service: Annotated[ImagesService, Depends()],
+):
+    query = images_service.get_liked_images_query(user)
+    image_filter.filter(query)
+    return paginate(
+        db_session,
+        query,
+        transformer=ImageDetailsSchema.from_model_bulk,
+    )
+
+
+@router.post("/liked/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+def like_image(
+    user: Annotated[User, Depends(get_user)],
+    image: Annotated[Image, Depends(get_image_by_id)],
+    images_service: Annotated[ImagesService, Depends()],
+):
+    images_service.like_image(image, user)
+
+
+@router.delete("/liked/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_like(
+    user: Annotated[User, Depends(get_user)],
+    image: Annotated[Image, Depends(get_image_by_id)],
+    images_service: Annotated[ImagesService, Depends()],
+):
+    images_service.remove_like(image, user)
 
 
 @router.patch(

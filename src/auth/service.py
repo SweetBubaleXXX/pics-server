@@ -5,7 +5,7 @@ from fastapi_jwt import JwtAuthorizationCredentials
 
 from ..config import access_token_backend, refresh_token_backend
 from ..users.exceptions import InvalidPassword, UserNotFound
-from ..users.models import Role, UserRead
+from ..users.models import Role, User
 from ..users.service import UsersService
 from .models import JwtTokenPair, TokenSubject
 from .schemas import LoginSchema
@@ -20,7 +20,7 @@ def validate_access_token(
 def get_user(
     credentials: Annotated[TokenSubject, Depends(validate_access_token)],
     users_service: Annotated[UsersService, Depends()],
-) -> UserRead:
+) -> User:
     user = users_service.get_user_by_id(credentials.user_id)
     if user.disabled:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User is disabled")
@@ -28,7 +28,7 @@ def get_user(
 
 
 def role_required(*required_roles: Role) -> Callable:
-    def validate_user(user: Annotated[UserRead, Depends(get_user)]):
+    def validate_user(user: Annotated[User, Depends(get_user)]):
         if user.role not in required_roles:
             raise HTTPException(status.HTTP_403_FORBIDDEN)
 
@@ -37,7 +37,7 @@ def role_required(*required_roles: Role) -> Callable:
 
 def issue_tokens(
     response: Response,
-    user: UserRead,
+    user: User,
 ) -> Response:
     token_subject = TokenSubject(user_id=user.id, role=user.role)
     serialized_subject = token_subject.model_dump()
