@@ -57,6 +57,18 @@ class UsersService:
             setattr(user_in_db, field, value)
         return self._save_user(user_in_db)
 
+    def change_password(
+        self,
+        user: User,
+        current_password: str,
+        new_password: str,
+    ) -> User:
+        password_correct = self._passlib_context.verify(current_password, user.password)
+        if not password_correct:
+            raise InvalidPassword()
+        user.password = self._passlib_context.handler(new_password)
+        return self._save_user(user)
+
     @raises_on_not_found(UserNotFound)
     def delete_user(self, user_id: int) -> None:
         user = self._session.get_one(User, user_id)

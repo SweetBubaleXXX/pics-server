@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
-from src.auth.schemas import RegistrationSchema
+from src.auth.schemas import PasswordUpdateSchema, RegistrationSchema
 from src.auth.service import get_user, role_required
 from src.db.session import DBSession
 from src.users.models import Role, User, UserCreate, UserRead, UserUpdate
@@ -38,6 +38,19 @@ def create_user(
 ) -> Any:
     user = UserCreate.model_validate(credentials)
     return users_service.create_user(user)
+
+
+@router.post("/change-password")
+def change_password(
+    password_update: PasswordUpdateSchema,
+    user: Annotated[User, Depends(get_user)],
+    users_service: Annotated[UsersService, Depends()],
+) -> None:
+    users_service.change_password(
+        user,
+        password_update.current_password,
+        password_update.new_password,
+    )
 
 
 @router.get(

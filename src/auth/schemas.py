@@ -10,3 +10,8 @@ class LoginSchema(BaseModel):
 
 class RegistrationSchema(LoginSchema):
     pass
+
+
+class PasswordUpdateSchema(BaseModel):
+    current_password: str = Field(**PASSWORD_CONSTRAINTS)
+    new_password: str = Field(**PASSWORD_CONSTRAINTS)
