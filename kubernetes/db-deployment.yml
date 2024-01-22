@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pics-server-db
+  labels:
+    app: pics-server-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pics-server-db
+  template:
+    metadata:
+      labels:
+        app: pics-server-db
+    spec:
+      containers:
+        - name: pics-server-db
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+          - secretRef:
+              name: pics-server-secret
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: pics-server-db-pvc
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: pics-server-db-service
+  labels:
+    app: pics-server-db
+spec:
+  type: NodePort
+  ports:
+    - port: 5432
+  selector:
+    app: pics-server-db

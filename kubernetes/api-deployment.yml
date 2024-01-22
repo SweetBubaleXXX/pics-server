@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pics-server-app
+  labels:
+    app: pics-server-app
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: pics-server-app
+  template:
+    metadata:
+      labels:
+        app: pics-server-app
+    spec:
+      containers:
+      - name: pics-server-app
+        image: pics-server
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: pics-server-secret
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: pics-server-api
+spec:
+  selector:
+    app: pics-server-app
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
