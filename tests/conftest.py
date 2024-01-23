@@ -60,7 +60,9 @@ async def trigger_lifespan_events(app: FastAPI):
 
 @pytest.fixture
 def database(container: Container):
-    return container.db()
+    db = container.db()
+    db.create_tables()
+    return db
 
 
 @pytest.fixture
