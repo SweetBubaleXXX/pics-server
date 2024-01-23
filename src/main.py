@@ -1,6 +1,3 @@
-import functools
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi_pagination import add_pagination
 
@@ -23,17 +20,9 @@ def setup_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(UserAlreadyExists, user_already_exists_handler)
 
 
-@asynccontextmanager
-async def lifespan(container: Container, app: FastAPI):
-    db = container.db()
-    db.create_tables()
-
-    yield
-
-
 def create_app() -> FastAPI:
     container = Container()
-    app = FastAPI(lifespan=functools.partial(lifespan, container))
+    app = FastAPI()
     app.container = container
 
     setup_exception_handlers(app)
